@@ -1,0 +1,39 @@
+---
+title: "DataCleaning"
+author: "Cynthia Wang"
+date: "4/30/2020"
+output:
+  html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+license <- read.csv('NYC_Dog_Licensing_Dataset.csv')
+license <- license %>% distinct(AnimalName, AnimalGender,AnimalBirthMonth,BreedName, .keep_all = TRUE) %>% select(Name = AnimalName, Gender = AnimalGender,BirthYear = AnimalBirthMonth, Breed = BreedName, ZipCode, LicenseIssuedDate) %>% mutate(RegYear = year(as.POSIXct(LicenseIssuedDate,format = "%m/%d/%Y")))
+```
+
+
+```{r}
+zipcode_borough <-  read.csv('nyc_Domain_Registrations_by_Zip_Code.csv') %>% mutate(ZipCode = as.numeric(as.character(ZIP.Code))) %>% select(ZipCode, Borough)
+```
+
+```{r}
+data <- inner_join(license, zipcode_borough, by = 'ZipCode')
+head(data)
+```
+
+
+```{r}
+library(rgdal)
+library(tmap)
+borough <- readOGR('borough_boundaries.geojson')
+boro_count <- data %>% group_by(Borough, RegYear) %>% summarise(Number_of_dogs = n()) %>% mutate(year = as.character(RegYear), Number_of_dogs = as.numeric(Number_of_dogs)) %>% select(boro_name = Borough, year, Number_of_dogs)
+borough@data <- left_join(borough@data,boro_count, by = "boro_name")
+borough@data
+```
+
+```{r}
+tm_shape(borough) + tm_polygons("Number_of_dogs",palette="-Blues") + tm_facets("year")
+```
+
