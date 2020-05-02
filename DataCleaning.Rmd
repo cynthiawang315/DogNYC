@@ -3,7 +3,8 @@ title: "DataCleaning"
 author: "Cynthia Wang"
 date: "4/30/2020"
 output:
-  html_notebook
+  html_document:
+    df_print: paged
 ---
 
 ```{r}
