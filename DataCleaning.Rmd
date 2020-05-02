@@ -7,7 +7,7 @@ output:
     df_print: paged
 ---
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
 library(tidyverse)
 library(lubridate)
 license <- read.csv('NYC_Dog_Licensing_Dataset.csv')
@@ -15,17 +15,17 @@ license <- license %>% distinct(AnimalName, AnimalGender,AnimalBirthMonth,BreedN
 ```
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
 zipcode_borough <-  read.csv('nyc_Domain_Registrations_by_Zip_Code.csv') %>% mutate(ZipCode = as.numeric(as.character(ZIP.Code))) %>% select(ZipCode, Borough)
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
 data <- inner_join(license, zipcode_borough, by = 'ZipCode')
 head(data)
 ```
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
 library(rgdal)
 library(tmap)
 borough <- readOGR('borough_boundaries.geojson')
@@ -34,7 +34,8 @@ borough@data <- left_join(borough@data,boro_count, by = "boro_name")
 borough@data
 ```
 
-```{r}
-tm_shape(borough) + tm_polygons("Number_of_dogs",palette="-Blues") + tm_facets("year")
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+tm_shape(borough) + tm_polygons("Number_of_dogs",palette="-GnBu",title = "Number of Dogs")
 ```
 
