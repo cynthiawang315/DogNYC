@@ -1,11 +1,18 @@
 ---
 title: "Dogs in NYC"
-author: "Cynthia Wang"
-date: "4/30/2020"
+author: "Cynthia Wang, Ivy Wang, Olivia Huang"
+date: "May 2020"
+
 output:
-  html_document:
-    df_print: paged
+  prettydoc::html_pretty:
+    theme: architect
 ---
+
+Where are the dogs in New York City? What are people's preferences of dogs? How are people naming their dogs?  
+This project aims to answer these questions through various visualizations.  
+
+
+## Let's locate the dogs! ![ ](paw.png){width=30px}
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
 library(tidyverse)
@@ -36,6 +43,95 @@ borough@data
 
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
-tm_shape(borough) + tm_polygons("Number_of_dogs",palette="-GnBu",title = "Number of Dogs")
+tm_shape(borough) + tm_fill("Number_of_dogs",palette="-GnBu",title = "Number of Dogs") + tm_facets(by = "year")
 ```
 
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
+# latlog <- read.csv("us-zip-code-latitude-and-longitude.csv", sep = ";") %>% select(ZipCode = Zip, lat = Latitude, lng = Longitude)
+# map_data <- data %>% filter(RegYear == '2018')
+# zip_dog <- map_data %>% group_by(ZipCode) %>% summarise(DogNumber = n())
+# zip_dogbreed <- map_data %>% group_by(ZipCode,Breed) %>% summarise(BreedNumber = n()) %>% top_n(1, wt = BreedNumber) %>% select(ZipCode, TopBreed = Breed)
+# zip_dogbreed <- aggregate(TopBreed ~ ZipCode, data = zip_dogbreed, paste, collapse = ";")
+# data_coord <- left_join(left_join(zip_dog,latlog, by = "ZipCode"),zip_dogbreed, by = "ZipCode") %>% filter(!is.na(lat) & !is.na(lng))
+# 
+# library(leaflet)
+# content <- paste("Zip Code: ",data_coord$ZipCode,"<br/>",
+#                   "Number of Dogs: ",data_coord$DogNumber,"<br/>",
+#                   "Most Popular Breed: ",data_coord$TopBreed,"<br/>")
+# DogIcon <- icons(
+#   iconUrl = "Icon.png",
+#   iconWidth = 30, iconHeight = 30,
+#   iconAnchorX = 7.5, iconAnchorY = 8.5
+#   )
+# my_map <- leaflet(data_coord) %>% setView(-73.8, 40.8, zoom = 12.5) %>% addTiles() %>% addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% addMarkers(lng = ~lng, lat = ~lat, popup = content, clusterOptions = markerClusterOptions(), icon = DogIcon)
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+latlog <- read.csv("us-zip-code-latitude-and-longitude.csv", sep = ";") %>% select(ZipCode = Zip, lat = Latitude, lng = Longitude)
+
+MapYear <- function(year) {
+  map_data <- data %>% filter(RegYear == year)
+  zip_dog <- map_data %>% group_by(ZipCode) %>% summarise(DogNumber = n())
+  zip_dogbreed <- map_data %>% group_by(ZipCode,Breed) %>% summarise(BreedNumber = n()) %>% top_n(1, wt = BreedNumber) %>% select(ZipCode, TopBreed = Breed)
+  zip_dogbreed <- aggregate(TopBreed ~ ZipCode, data = zip_dogbreed, paste, collapse = ";")
+  data_coord <- left_join(left_join(zip_dog,latlog, by = "ZipCode"),zip_dogbreed, by = "ZipCode") %>% filter(!is.na(lat) & !is.na(lng))
+  
+  library(leaflet)
+  content <- paste("Zip Code: ",data_coord$ZipCode,"<br/>",
+                    "Number of Dogs: ",data_coord$DogNumber,"<br/>",
+                    "Most Popular Breed: ",data_coord$TopBreed,"<br/>")
+  DogIcon <- icons(
+    iconUrl = "Icon.png",
+    iconWidth = 30, iconHeight = 30,
+    iconAnchorX = 7.5, iconAnchorY = 8.5
+    )
+  my_map <- leaflet(data_coord) %>% 
+    setView(-73.9742, 40.7859, zoom = 13) %>% 
+    addTiles() %>% 
+    addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% 
+    addMarkers(lng = ~lng, lat = ~lat, popup = content, clusterOptions = markerClusterOptions(), icon = DogIcon)
+  return(my_map) %>%
+    addControl(`year`, position = "topright")
+}
+
+leafsync::sync(MapYear(2015),MapYear(2016),MapYear(2017),MapYear(2018))
+```  
+The map shows us the distribution of dogs over different Zip Codes and the most popular breed(s) in that region. Check out the dogs in your neighborhood!  
+
+
+## Who's the most popular over time?
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(reshape2)
+library(xts)
+library(dygraphs)
+
+data$Month_Yr <- as.Date(data$LicenseIssuedDate, format = "%m/%d/%Y")
+data$Month_Yr <- format(as.Date(data$Month_Yr), "%Y-%m")
+
+# get top 10 breed 
+top_10 = data %>% select(c("Breed","Month_Yr")) %>% group_by(Breed) %>% count()  
+top_10  = top_10[order(top_10$n,decreasing = TRUE),]
+top_10_char = as.character(head(top_10$Breed,10))
+
+data_sml = data %>% select(c("Breed","Month_Yr")) %>% 
+              filter(Breed %in% top_10_char) %>% 
+              group_by(Breed, Month_Yr) %>% count() %>%
+              as.data.frame()
+
+data_sml$Month_Yr = as.Date(paste0(data_sml$Month_Yr, "-01"))
+
+data_sml_wide = dcast(data_sml,Month_Yr ~ Breed, value.var = "n")
+
+ts_data_sml = xts(data_sml_wide, order.by = data_sml_wide$Month_Yr) 
+ts_data_sml$Month_Yr <- NULL
+
+p <- dygraph(ts_data_sml)
+
+p
+```
+
+
+
+## Popular Dog Names
