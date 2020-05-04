@@ -90,9 +90,9 @@ MapYear <- function(year) {
     setView(-73.9742, 40.7859, zoom = 13) %>% 
     addTiles() %>% 
     addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% 
-    addMarkers(lng = ~lng, lat = ~lat, popup = content, clusterOptions = markerClusterOptions(), icon = DogIcon)
-  return(my_map) %>%
+    addMarkers(lng = ~lng, lat = ~lat, popup = content, clusterOptions = markerClusterOptions(), icon = DogIcon) %>%
     addControl(`year`, position = "topright")
+  return(my_map)
 }
 
 leafsync::sync(MapYear(2015),MapYear(2016),MapYear(2017),MapYear(2018))
