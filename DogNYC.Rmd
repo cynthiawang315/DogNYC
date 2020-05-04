@@ -1,6 +1,6 @@
 ---
 title: "Dogs in NYC"
-author: "Cynthia Wang, Ivy Wang, Olivia Huang"
+author: "Cynthia Wang, Yihui Wang, Olivia Huang"
 date: "May 2020"
 
 output:
