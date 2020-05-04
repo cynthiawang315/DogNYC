@@ -9,10 +9,10 @@ output:
 ---
 
 Where are the dogs in New York City? What are people's preferences of dogs? How are people naming their dogs?  
-This project aims to answer these questions through various visualizations.  
+This project aims to answer these questions through various visualizations.  ![ ](paw.png){width=30px}
 
 
-## Let's locate the dogs! ![ ](paw.png){width=30px}
+## Let's locate the dogs!
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
 library(tidyverse)
@@ -31,43 +31,29 @@ data <- inner_join(license, zipcode_borough, by = 'ZipCode')
 head(data)
 ```
 
-
-```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
+### Across boroughs
+```{r, echo = FALSE, message = FALSE, warning = FALSE, error = FALSE,results='hide',fig.keep='all',fig.height = 5, fig.width = 9}
 library(rgdal)
 library(tmap)
-borough <- readOGR('borough_boundaries.geojson')
-boro_count <- data %>% group_by(Borough, RegYear) %>% summarise(Number_of_dogs = n()) %>% mutate(year = as.character(RegYear), Number_of_dogs = as.numeric(Number_of_dogs)) %>% select(boro_name = Borough, year, Number_of_dogs)
-borough@data <- left_join(borough@data,boro_count, by = "boro_name")
-borough@data
+# borough <- readOGR('borough_boundaries.geojson')
+
+choropleth <- function(Year) {
+  borough <- readOGR('borough_boundaries.geojson')
+  boro_count <- data %>% group_by(Borough, RegYear) %>% summarise(Number_of_dogs = n()) %>% mutate(year = as.character(RegYear), Number_of_dogs = as.numeric(Number_of_dogs)) %>% select(boro_name = Borough, year, Number_of_dogs) %>% filter(year == as.character(Year))
+  borough@data <- left_join(borough@data,boro_count, by = "boro_name")
+  
+  map <- tm_shape(borough) + tm_fill("Number_of_dogs",palette="-GnBu",title = "Number of Dogs") + tm_layout(title = Year,legend.outside=TRUE)
+  return(map)
+}
+
+tmap_arrange(choropleth(2014), choropleth(2015),choropleth(2016),choropleth(2017),choropleth(2018))
 ```
 
+The overall distribution of dogs across boroughs didn't change much during 2014-2018. Compared to other boroughs, the number of dogs increased in Queens and Brooklyn in 2017 and 2018. While the number of dogs is consistently highest in Manhattan, it is the lowest in Staten Island.
+
+### By Zip Code
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
-tm_shape(borough) + tm_fill("Number_of_dogs",palette="-GnBu",title = "Number of Dogs") + tm_facets(by = "year")
-```
-
-
-```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
-# latlog <- read.csv("us-zip-code-latitude-and-longitude.csv", sep = ";") %>% select(ZipCode = Zip, lat = Latitude, lng = Longitude)
-# map_data <- data %>% filter(RegYear == '2018')
-# zip_dog <- map_data %>% group_by(ZipCode) %>% summarise(DogNumber = n())
-# zip_dogbreed <- map_data %>% group_by(ZipCode,Breed) %>% summarise(BreedNumber = n()) %>% top_n(1, wt = BreedNumber) %>% select(ZipCode, TopBreed = Breed)
-# zip_dogbreed <- aggregate(TopBreed ~ ZipCode, data = zip_dogbreed, paste, collapse = ";")
-# data_coord <- left_join(left_join(zip_dog,latlog, by = "ZipCode"),zip_dogbreed, by = "ZipCode") %>% filter(!is.na(lat) & !is.na(lng))
-# 
-# library(leaflet)
-# content <- paste("Zip Code: ",data_coord$ZipCode,"<br/>",
-#                   "Number of Dogs: ",data_coord$DogNumber,"<br/>",
-#                   "Most Popular Breed: ",data_coord$TopBreed,"<br/>")
-# DogIcon <- icons(
-#   iconUrl = "Icon.png",
-#   iconWidth = 30, iconHeight = 30,
-#   iconAnchorX = 7.5, iconAnchorY = 8.5
-#   )
-# my_map <- leaflet(data_coord) %>% setView(-73.8, 40.8, zoom = 12.5) %>% addTiles() %>% addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% addMarkers(lng = ~lng, lat = ~lat, popup = content, clusterOptions = markerClusterOptions(), icon = DogIcon)
-```
-
-```{r echo = FALSE, message = FALSE, warning = FALSE}
 latlog <- read.csv("us-zip-code-latitude-and-longitude.csv", sep = ";") %>% select(ZipCode = Zip, lat = Latitude, lng = Longitude)
 
 MapYear <- function(year) {
@@ -127,11 +113,120 @@ data_sml_wide = dcast(data_sml,Month_Yr ~ Breed, value.var = "n")
 ts_data_sml = xts(data_sml_wide, order.by = data_sml_wide$Month_Yr) 
 ts_data_sml$Month_Yr <- NULL
 
-p <- dygraph(ts_data_sml)
+p <- dygraph(ts_data_sml, main = "Top 10 Breeds over time") %>%
+        dyRangeSelector(dateWindow = c("2014-01-01", "2018-12-31")) %>%
+        dyLegend(labelsSeparateLines = TRUE)
 
 p
 ```
 
 
 
-## Popular Dog Names
+## What are people naming their dogs?
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
+library(RColorBrewer)
+library(wordcloud)
+library(wordcloud2)
+library(tm)
+library(dplyr)
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
+cleaned_data_1998 = data[data$BirthYear==1998, ]
+cleaned_data_2008 = data[data$BirthYear==2008, ]
+cleaned_data_2018 = data[data$BirthYear==2018, ]
+
+myCorpus_98 <- Corpus(VectorSource(cleaned_data_1998$Name))
+myCorpus_08 <- Corpus(VectorSource(cleaned_data_2008$Name))
+myCorpus_18 <- Corpus(VectorSource(cleaned_data_2018$Name))
+```
+
+
+### In 1998
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+myCorpus_98 <- tm_map(myCorpus_98, toSpace, "/")
+myCorpus_98 <- tm_map(myCorpus_98, toSpace, "@")
+myCorpus_98 <- tm_map(myCorpus_98, toSpace, "\\|")
+
+myCorpus_98 <- tm_map(myCorpus_98, removePunctuation)
+myCorpus_98 <- tm_map(myCorpus_98, stripWhitespace)
+myCorpus_98 <- tm_map(myCorpus_98, removeNumbers)
+myCorpus_98 <- tm_map(myCorpus_98, removeWords, stopwords("english"))
+myCorpus_98 <- tm_map(myCorpus_98, removeWords, c("UNKNOWN","NAME","NOT",'unknown','name','not')) 
+
+dtm <- TermDocumentMatrix(myCorpus_98)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+#head(d, 10)
+
+# Most popular dog names in 1998
+set.seed(4321)
+# wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+#           max.words=20, random.order=FALSE, rot.per=0.35,
+#           colors=brewer.pal(12, "Dark2"))
+
+wordcloud2(data=d, size = 1)
+```
+
+### In 2008
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+myCorpus_08 <- tm_map(myCorpus_08, toSpace, "/")
+myCorpus_08 <- tm_map(myCorpus_08, toSpace, "@")
+myCorpus_08 <- tm_map(myCorpus_08, toSpace, "\\|")
+
+myCorpus_08 <- tm_map(myCorpus_08, removePunctuation)
+myCorpus_08 <- tm_map(myCorpus_08, stripWhitespace)
+myCorpus_08 <- tm_map(myCorpus_08, removeNumbers)
+myCorpus_08 <- tm_map(myCorpus_08, removeWords, stopwords("english"))
+myCorpus_08 <- tm_map(myCorpus_08, removeWords, c("UNKNOWN","NAME","NOT",'PROVIDED','unknown','name','not')) 
+
+
+dtm <- TermDocumentMatrix(myCorpus_08)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+
+# Most popular dog names in 2008
+set.seed(1234)
+# wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+#           max.words=70, random.order=FALSE, rot.per=0.35,
+#           colors=brewer.pal(8,"Dark2"))
+
+wordcloud2(data=d, size = 1)
+```
+
+### In 2018
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+myCorpus_18 <- tm_map(myCorpus_18, toSpace, "/")
+myCorpus_18 <- tm_map(myCorpus_18, toSpace, "@")
+myCorpus_18 <- tm_map(myCorpus_18, toSpace, "\\|")
+
+myCorpus_18 <- tm_map(myCorpus_18, removePunctuation)
+myCorpus_18 <- tm_map(myCorpus_18, stripWhitespace)
+myCorpus_18 <- tm_map(myCorpus_18, removeNumbers)
+myCorpus_18 <- tm_map(myCorpus_18, removeWords, stopwords("english"))
+myCorpus_18 <- tm_map(myCorpus_18, removeWords, c("UNKNOWN","NAME","NOT",'PROVIDED','NONE','unknown','name','not','provided','none')) 
+
+
+dtm <- TermDocumentMatrix(myCorpus_18)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+
+# Most popular dog names in 2018
+set.seed(4231)
+# wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+#           max.words=20, random.order=FALSE, rot.per=0.35,
+#           colors=brewer.pal(8, "Dark2"))
+
+wordcloud2(data=d, size = 1)
+```
