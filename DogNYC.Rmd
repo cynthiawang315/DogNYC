@@ -114,7 +114,7 @@ ts_data_sml = xts(data_sml_wide, order.by = data_sml_wide$Month_Yr)
 ts_data_sml$Month_Yr <- NULL
 
 p <- dygraph(ts_data_sml, main = "Top 10 Breeds over time") %>%
-        dyRangeSelector(dateWindow = c("2014-01-01", "2018-12-31")) %>%
+        dyRangeSelector(dateWindow = c("2014-09-01", "2018-12-31")) %>%
         dyLegend(labelsSeparateLines = TRUE)
 
 p
