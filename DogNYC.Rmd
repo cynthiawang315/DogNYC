@@ -100,7 +100,7 @@ leafsync::sync(MapYear(2015),MapYear(2016),MapYear(2017),MapYear(2018))
 ```  
 
 
-## Who are geting more dogs?  
+## Who are getting more dogs?  
 
 We collected the income information from different Zip Codes. The scatterplot shows the relationship between median household income and the number of new registered dogs. It seems like households whose median income is from 75k - 100k are getting more dogs over these years.  
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE}
