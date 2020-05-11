@@ -1,6 +1,6 @@
 # Dogs in New York City
 
-The project aims to visualize the characteristics of dogs in New York City.
+The project aims to discover the dogs in New York City.
 Link to the project: https://cynthiawang315.github.io/DogNYC/
 
 
